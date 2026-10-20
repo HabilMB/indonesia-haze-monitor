@@ -95,6 +95,41 @@ unit_tests:
       rows:
         - {hotspot_id: "a"}
 
+  - name: fact_hotspot_incremental_heals_partially_copied_reload
+    description: A previous dbt run copied X but failed before Y; both carry the same ingested_at.
+    model: fact_hotspot
+    overrides:
+      macros:
+        is_incremental: true
+    given:
+      - input: this
+        rows:
+          - {hotspot_id: "x", acq_date: "2026-10-17", ingested_at: "2026-10-20 07:00:00"}
+      - input: ref('stg_firms__hotspots')
+        rows:
+          - {hotspot_id: "x", acq_date: "2026-10-17", ingested_at: "2026-10-20 07:00:00"}
+          - {hotspot_id: "y", acq_date: "2026-10-18", ingested_at: "2026-10-20 07:00:00"}
+    expect:
+      rows:
+        - {hotspot_id: "y"}
+
+  - name: fact_hotspot_incremental_takes_reload_with_older_clock
+    description: A reload from a runner whose clock is behind still replaces the partition.
+    model: fact_hotspot
+    overrides:
+      macros:
+        is_incremental: true
+    given:
+      - input: this
+        rows:
+          - {hotspot_id: "old", acq_date: "2026-10-17", ingested_at: "2026-10-20 07:05:00"}
+      - input: ref('stg_firms__hotspots')
+        rows:
+          - {hotspot_id: "new", acq_date: "2026-10-17", ingested_at: "2026-10-20 07:03:00"}
+    expect:
+      rows:
+        - {hotspot_id: "new"}
+
   - name: fact_air_quality_daily_ignores_null_hours
     model: fact_air_quality_daily
     given:

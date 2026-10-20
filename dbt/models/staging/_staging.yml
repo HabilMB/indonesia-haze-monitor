@@ -54,6 +54,17 @@ unit_tests:
         - {acquired_at: "2026-10-17 05:18:00", confidence_level: "nominal", is_daytime: true}
         - {acquired_at: "2026-10-18 00:05:00", confidence_level: "low", is_daytime: false}
 
+  - name: stg_firms_drops_exact_duplicate_detections
+    model: stg_firms__hotspots
+    given:
+      - input: source('raw', 'firms_hotspots')
+        rows:
+          - {latitude: -2.5, longitude: 113.9, acq_date: "2026-10-17", acq_time: "0518", confidence: "n", daynight: "D", satellite: "N", frp: 4.4, bright_ti4: 330.1, bright_ti5: 295.0, ingested_at: "2026-10-20 07:00:00"}
+          - {latitude: -2.5, longitude: 113.9, acq_date: "2026-10-17", acq_time: "0518", confidence: "n", daynight: "D", satellite: "N", frp: 4.4, bright_ti4: 330.1, bright_ti5: 295.0, ingested_at: "2026-10-20 07:00:00"}
+    expect:
+      rows:
+        - {acquired_at: "2026-10-17 05:18:00"}
+
   - name: stg_air_quality_maps_city_and_date
     model: stg_open_meteo__air_quality_hourly
     given:
