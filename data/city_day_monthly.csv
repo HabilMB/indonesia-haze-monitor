@@ -1,0 +1,25 @@
+city_id,city_name,month,days,pm2_5_mean,pm2_5_worst_day,hotspots_100km,hotspots_250km
+banjarmasin,Banjarmasin,2026-08,10,19.54,27.9,4029,20091
+jakarta,Jakarta,2026-08,10,85.8,111.86,106,543
+jambi,Jambi,2026-08,10,51.52,90.11,747,4182
+merauke,Merauke,2026-08,10,24.89,45.2,1030,2589
+palangka_raya,Palangka Raya,2026-08,10,174.4,371.07,9818,21900
+palembang,Palembang,2026-08,10,52.71,99.29,2213,6743
+pontianak,Pontianak,2026-08,10,114.38,202.29,3324,13542
+samarinda,Samarinda,2026-08,10,15.81,19.23,460,2153
+banjarmasin,Banjarmasin,2026-09,30,60.99,187.84,20660,61076
+jakarta,Jakarta,2026-09,30,89.28,120.7,288,1861
+jambi,Jambi,2026-09,30,67.55,127.31,4183,16253
+merauke,Merauke,2026-09,30,28.83,65.95,8370,20001
+palangka_raya,Palangka Raya,2026-09,30,465.21,1000.44,27265,66629
+palembang,Palembang,2026-09,30,58.06,115.01,10079,24722
+pontianak,Pontianak,2026-09,30,91.08,144.4,1937,15707
+samarinda,Samarinda,2026-09,30,24.93,90.43,2717,9341
+banjarmasin,Banjarmasin,2026-10,19,63.99,172.1,10744,38961
+jakarta,Jakarta,2026-10,19,108.62,151.86,151,1154
+jambi,Jambi,2026-10,19,124.3,221.69,4303,9653
+merauke,Merauke,2026-10,19,52.27,105.55,8850,25774
+palangka_raya,Palangka Raya,2026-10,19,767.53,1111.55,19252,45671
+palembang,Palembang,2026-10,19,108.41,160.64,10963,23386
+pontianak,Pontianak,2026-10,19,63.23,116.06,40,1408
+samarinda,Samarinda,2026-10,19,37.36,66.53,1831,6685
