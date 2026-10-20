@@ -42,6 +42,24 @@ models:
       - name: hours_observed
         description: Hours with a non-NULL PM2.5 value (24 on a complete day).
 
+  - name: city_day
+    description: >
+      Dashboard mart: one row per city per UTC day with modeled PM2.5 and the number of
+      nominal/high-confidence hotspots within 100 and 250 km of the city.
+    columns:
+      - name: city_date_id
+        data_tests: [unique, not_null]
+      - name: city_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_city')
+                field: city_id
+      - name: hotspots_100km
+        data_tests: [not_null]
+      - name: hotspots_250km
+        data_tests: [not_null]
+
 unit_tests:
   - name: fact_hotspot_incremental_takes_reloaded_partitions
     model: fact_hotspot
@@ -90,3 +108,26 @@ unit_tests:
       rows:
         - {city_date_id: "jambi|2026-10-17", pm2_5_mean: 20.0, pm2_5_max: 30.0, pm10_mean: 30.0, us_aqi_max: 90, hours_observed: 2}
         - {city_date_id: "jambi|2026-10-18", pm2_5_mean: null, pm2_5_max: null, pm10_mean: null, us_aqi_max: null, hours_observed: 0}
+
+  - name: city_day_counts_rings_and_keeps_quiet_days
+    model: city_day
+    description: City on the equator at 110E; 1 degree of latitude is about 110.6 km.
+    given:
+      - input: ref('dim_city')
+        rows:
+          - {city_id: "testville", city_name: "Testville", province: "Test", latitude: 0.0, longitude: 110.0}
+      - input: ref('fact_air_quality_daily')
+        rows:
+          - {city_date_id: "testville|2026-10-17", city_id: "testville", date_utc: "2026-10-17", pm2_5_mean: 100.0, pm2_5_max: 150.0, us_aqi_max: 200, hours_observed: 24}
+          - {city_date_id: "testville|2026-10-18", city_id: "testville", date_utc: "2026-10-18", pm2_5_mean: 20.0, pm2_5_max: 25.0, us_aqi_max: 70, hours_observed: 24}
+      - input: ref('fact_hotspot')
+        rows:
+          - {acq_date: "2026-10-17", latitude: 0.5, longitude: 110.0, confidence_level: "nominal"}  # ~55 km
+          - {acq_date: "2026-10-17", latitude: 1.5, longitude: 110.0, confidence_level: "high"}     # ~166 km
+          - {acq_date: "2026-10-17", latitude: 3.0, longitude: 110.0, confidence_level: "high"}     # ~332 km
+          - {acq_date: "2026-10-17", latitude: 0.1, longitude: 110.0, confidence_level: "low"}      # excluded
+          - {acq_date: "2026-10-16", latitude: 0.1, longitude: 110.0, confidence_level: "high"}     # other day
+    expect:
+      rows:
+        - {city_date_id: "testville|2026-10-17", city_name: "Testville", pm2_5_mean: 100.0, hotspots_100km: 1, hotspots_250km: 2}
+        - {city_date_id: "testville|2026-10-18", city_name: "Testville", pm2_5_mean: 20.0, hotspots_100km: 0, hotspots_250km: 0}
