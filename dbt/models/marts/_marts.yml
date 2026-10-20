@@ -20,6 +20,28 @@ models:
               arguments:
                 values: [low, nominal, high]
 
+  - name: fact_air_quality_daily
+    description: Modeled air quality per city per UTC day. Means and maxes ignore NULL hours.
+    columns:
+      - name: city_date_id
+        data_tests: [unique, not_null]
+      - name: city_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_city')
+                field: city_id
+      - name: pm2_5_mean
+        data_tests:
+          - in_range:
+              arguments: {min_value: 0, max_value: 5000}
+      - name: pm2_5_max
+        data_tests:
+          - in_range:
+              arguments: {min_value: 0, max_value: 5000}
+      - name: hours_observed
+        description: Hours with a non-NULL PM2.5 value (24 on a complete day).
+
 unit_tests:
   - name: fact_hotspot_incremental_takes_reloaded_partitions
     model: fact_hotspot
@@ -54,3 +76,17 @@ unit_tests:
     expect:
       rows:
         - {hotspot_id: "a"}
+
+  - name: fact_air_quality_daily_ignores_null_hours
+    model: fact_air_quality_daily
+    given:
+      - input: ref('stg_open_meteo__air_quality_hourly')
+        rows:
+          - {city_id: "jambi", date_utc: "2026-10-17", pm2_5: 10.0, pm10: 20.0, us_aqi: 50}
+          - {city_id: "jambi", date_utc: "2026-10-17", pm2_5: 30.0, pm10: 40.0, us_aqi: 90}
+          - {city_id: "jambi", date_utc: "2026-10-17", pm2_5: null, pm10: null, us_aqi: null}
+          - {city_id: "jambi", date_utc: "2026-10-18", pm2_5: null, pm10: null, us_aqi: null}
+    expect:
+      rows:
+        - {city_date_id: "jambi|2026-10-17", pm2_5_mean: 20.0, pm2_5_max: 30.0, pm10_mean: 30.0, us_aqi_max: 90, hours_observed: 2}
+        - {city_date_id: "jambi|2026-10-18", pm2_5_mean: null, pm2_5_max: null, pm10_mean: null, us_aqi_max: null, hours_observed: 0}
