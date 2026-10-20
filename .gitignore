@@ -18,9 +18,11 @@ __pycache__/
 target/
 dbt_packages/
 logs/
+dbt/.user.yml
 
 # Terraform
 .terraform/
 *.tfstate*
 *.tfvars
 .env
+

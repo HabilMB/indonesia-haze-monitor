@@ -1,0 +1,8 @@
+version: 2
+
+models:
+  - name: dim_city
+    description: One row per monitored city.
+    columns:
+      - name: city_id
+        data_tests: [unique, not_null]

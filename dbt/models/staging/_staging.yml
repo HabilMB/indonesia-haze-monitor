@@ -1,0 +1,19 @@
+version: 2
+
+models:
+  - name: stg_cities
+    description: City seed with a slug id; the only source of city coordinates.
+    columns:
+      - name: city_id
+        data_tests: [unique, not_null]
+
+unit_tests:
+  - name: stg_cities_builds_slug_id
+    model: stg_cities
+    given:
+      - input: ref('cities')
+        rows:
+          - {city: "Palangka Raya", province: "Kalimantan Tengah", latitude: -2.21, longitude: 113.92}
+    expect:
+      rows:
+        - {city_id: "palangka_raya", city_name: "Palangka Raya", province: "Kalimantan Tengah", latitude: -2.21, longitude: 113.92}

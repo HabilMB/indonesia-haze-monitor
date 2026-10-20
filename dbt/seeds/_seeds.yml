@@ -1,0 +1,11 @@
+version: 2
+
+seeds:
+  - name: cities
+    description: Fire-prone Indonesian cities plus Jakarta as a low-fire comparison. Shared with ingestion.
+    config:
+      column_types:
+        city: string
+        province: string
+        latitude: float64
+        longitude: float64
