@@ -1,0 +1,76 @@
+name: Daily refresh
+
+# Keeps the live demo alive: the BigQuery sandbox expires partitions after 60 days,
+# so ingestion, dbt and the CSV archive must run every day. Airflow (docker compose)
+# runs the same entrypoints locally; only this job writes the production datasets.
+on:
+  schedule:
+    - cron: "0 6 * * *"  # 06:00 UTC, after yesterday's last VIIRS overpasses are published
+  workflow_dispatch:
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      PYTHONPATH: ingestion
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            ingestion/requirements.txt
+            dbt/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r ingestion/requirements.txt -r dbt/requirements.txt
+
+      - name: Write service-account key
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          umask 077
+          printf '%s' "$GCP_SA_KEY" > "$RUNNER_TEMP/loader-sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/loader-sa.json" >> "$GITHUB_ENV"
+
+      - name: Ingest the last 3 completed UTC days
+        run: python -m haze_ingest
+
+      - name: dbt build
+        # Unit tests run in CI; production skips them (they need fact_hotspot to exist already).
+        run: dbt build --exclude-resource-type unit_test --project-dir dbt --profiles-dir dbt
+
+      - name: Source freshness
+        run: dbt source freshness --project-dir dbt --profiles-dir dbt
+
+      - name: Archive city_day to CSV
+        run: python -m haze_ingest.archive
+
+      - name: Commit archive
+        run: |
+          git add data/
+          if git diff --cached --quiet; then
+            echo "Archive unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git commit -m "data: refresh city_day archive ($(date -u +%F))"
+          git pull --rebase
+          git push
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/loader-sa.json"
