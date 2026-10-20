@@ -1,0 +1,16 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Loaded by the ingestion CLI (haze_ingest); each date partition is replaced as a whole.
+    schema: raw
+    config:
+      loaded_at_field: ingested_at
+      freshness:
+        warn_after: {count: 30, period: hour}
+        error_after: {count: 54, period: hour}
+    tables:
+      - name: firms_hotspots
+        description: NASA FIRMS VIIRS_SNPP_NRT detections over the Indonesia bounding box, partitioned by acq_date (UTC).
+      - name: air_quality_hourly
+        description: Open-Meteo modeled hourly PM2.5/PM10/US AQI per city, partitioned by date (UTC).
