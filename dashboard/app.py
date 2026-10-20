@@ -3,6 +3,7 @@ import altair as alt
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
+from google.api_core.exceptions import GoogleAPIError
 
 import loaders
 from shape import RING_INNER, RING_OUTER, latest_snapshot, ring_breakdown, season_ranking
@@ -30,6 +31,10 @@ try:
     hotspots = loaders.load_recent_hotspots()
 except loaders.MissingConfig as e:
     st.error(str(e))
+    st.stop()
+except (GoogleAPIError, TimeoutError):
+    # Public page: no BigQuery details (project, tables, account). Failures aren't cached, so a rerun retries.
+    st.error("Data is temporarily unavailable; try again in a few minutes.")
     st.stop()
 
 latest, snapshot = latest_snapshot(city_day)

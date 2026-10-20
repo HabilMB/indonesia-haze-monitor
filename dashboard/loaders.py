@@ -40,6 +40,8 @@ def client() -> bigquery.Client:
             credentials = service_account.Credentials.from_service_account_info(dict(info))
             return bigquery.Client(project=project_id(), credentials=credentials)
         return bigquery.Client(project=project_id())
+    except ValueError:
+        raise MissingConfig("The [gcp_service_account] secret is malformed; paste the full service-account key fields.") from None
     except DefaultCredentialsError:
         raise MissingConfig(
             "No GCP credentials: add [gcp_service_account] to Streamlit secrets or set GOOGLE_APPLICATION_CREDENTIALS."

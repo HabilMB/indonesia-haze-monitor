@@ -72,3 +72,18 @@ def test_missing_config_shows_error(app, monkeypatch):
     app.run()
     assert not app.exception
     assert "GCP_PROJECT_ID" in app.error[0].value
+
+
+@pytest.mark.parametrize("error", [
+    pytest.param(__import__("google.api_core.exceptions", fromlist=["Forbidden"]).Forbidden("Access Denied: Table p:marts.city_day"), id="forbidden"),
+    pytest.param(TimeoutError(), id="timeout"),
+])
+def test_bigquery_failure_shows_friendly_error_without_details(app, monkeypatch, error):
+    def failing():
+        raise error
+
+    monkeypatch.setattr(loaders, "load_city_day", failing)
+    app.run()
+    assert not app.exception
+    assert "temporarily unavailable" in app.error[0].value
+    assert "marts" not in app.error[0].value
