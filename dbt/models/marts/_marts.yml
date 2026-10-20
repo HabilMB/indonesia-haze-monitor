@@ -6,3 +6,51 @@ models:
     columns:
       - name: city_id
         data_tests: [unique, not_null]
+
+  - name: fact_hotspot
+    description: >
+      One row per FIRMS detection (all confidence levels), partitioned by acq_date (UTC).
+      Incremental: replaces any partition reloaded in raw since the last run.
+    columns:
+      - name: hotspot_id
+        data_tests: [unique, not_null]
+      - name: confidence_level
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [low, nominal, high]
+
+unit_tests:
+  - name: fact_hotspot_incremental_takes_reloaded_partitions
+    model: fact_hotspot
+    overrides:
+      macros:
+        is_incremental: true
+    given:
+      - input: this
+        rows:
+          - {hotspot_id: "a", acq_date: "2026-10-18", ingested_at: "2026-10-19 07:00:00"}
+      - input: ref('stg_firms__hotspots')
+        rows:
+          - {hotspot_id: "a", acq_date: "2026-10-18", ingested_at: "2026-10-19 07:00:00"}  # already loaded
+          - {hotspot_id: "b", acq_date: "2026-08-25", ingested_at: "2026-10-20 07:00:00"}  # backfilled old partition
+          - {hotspot_id: "c", acq_date: "2026-10-19", ingested_at: "2026-10-20 07:00:00"}  # new day
+    expect:
+      rows:
+        - {hotspot_id: "b"}
+        - {hotspot_id: "c"}
+
+  - name: fact_hotspot_incremental_on_empty_table_takes_everything
+    model: fact_hotspot
+    overrides:
+      macros:
+        is_incremental: true
+    given:
+      - input: this
+        rows: []
+      - input: ref('stg_firms__hotspots')
+        rows:
+          - {hotspot_id: "a", acq_date: "2026-10-18", ingested_at: "2026-10-19 07:00:00"}
+    expect:
+      rows:
+        - {hotspot_id: "a"}
