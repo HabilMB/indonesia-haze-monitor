@@ -1,0 +1,16 @@
+name: haze_monitor
+version: "1.0.0"
+profile: haze_monitor
+
+seeds:
+  haze_monitor:
+    +schema: staging
+
+models:
+  haze_monitor:
+    staging:
+      +schema: staging
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table
