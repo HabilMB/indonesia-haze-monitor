@@ -29,12 +29,16 @@ jobs:
             ingestion/requirements-dev.txt
             ingestion/requirements.txt
             dbt/requirements.txt
+            dashboard/requirements.txt
 
       - name: Install dependencies
-        run: pip install -r ingestion/requirements-dev.txt -r dbt/requirements.txt
+        run: pip install -r ingestion/requirements-dev.txt -r dbt/requirements.txt -r dashboard/requirements.txt
 
       - name: pytest (ingestion)
         run: python -m pytest ingestion -v
+
+      - name: pytest (dashboard)
+        run: python -m pytest dashboard -v
 
       - name: dbt parse
         # profiles.yml reads these at parse time; parse never connects, so placeholders are enough.
