@@ -1,0 +1,26 @@
+# Secrets
+.env
+secrets/
+*.json
+.streamlit/secrets.toml
+
+# Local notes
+*.md
+!README.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# dbt
+target/
+dbt_packages/
+logs/
+
+# Terraform
+.terraform/
+*.tfstate*
+*.tfvars
+.env
