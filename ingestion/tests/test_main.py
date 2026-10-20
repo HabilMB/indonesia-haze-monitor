@@ -103,3 +103,40 @@ def test_main_returns_1_without_gcp_credentials(monkeypatch, caplog):
     monkeypatch.setattr(cli.bigquery, "Client", no_credentials)
     assert cli.main([]) == 1
     assert "GOOGLE_APPLICATION_CREDENTIALS" in caplog.text
+
+
+def test_run_validates_both_tables_before_loading_either(monkeypatch, fake):
+    monkeypatch.setattr(cli, "fetch_hotspots", lambda session, key, start, n: [hotspot(d) for d in DAYS])
+    monkeypatch.setattr(cli, "fetch_air_quality", lambda session, city, start, end: [air(city, date(2026, 10, 20))])
+    with pytest.raises(ValueError, match="2026-10-20"):
+        cli.run(SETTINGS, None, fake, CITIES, DAYS[0], DAYS[-1], NOW)
+    assert fake.loads == [] and fake.deleted == []
+
+
+@pytest.mark.parametrize("error", [
+    pytest.param(__import__("google.api_core.exceptions", fromlist=["Forbidden"]).Forbidden("quota"), id="google-api"),
+    pytest.param(__import__("concurrent.futures", fromlist=["TimeoutError"]).TimeoutError(), id="job-timeout"),
+])
+def test_main_returns_1_on_bigquery_failure(monkeypatch, caplog, error):
+    def failing_run(*args):
+        raise error
+
+    monkeypatch.setenv("FIRMS_MAP_KEY", "KEY123")
+    monkeypatch.setenv("GCP_PROJECT_ID", "p")
+    monkeypatch.setattr(cli.bigquery, "Client", lambda project: object())
+    monkeypatch.setattr(cli, "run", failing_run)
+    assert cli.main([]) == 1
+    assert "BigQuery" in caplog.text
+
+
+def test_main_credentials_error_keeps_cause(monkeypatch, caplog):
+    from google.auth.exceptions import DefaultCredentialsError
+
+    def missing_file(project):
+        raise DefaultCredentialsError("File secrets/loader-sa.json was not found.")
+
+    monkeypatch.setenv("FIRMS_MAP_KEY", "KEY123")
+    monkeypatch.setenv("GCP_PROJECT_ID", "p")
+    monkeypatch.setattr(cli.bigquery, "Client", missing_file)
+    assert cli.main([]) == 1
+    assert "secrets/loader-sa.json was not found" in caplog.text

@@ -4,13 +4,14 @@ import sys
 from datetime import date, datetime, timedelta, timezone
 
 import requests
+from google.api_core.exceptions import GoogleAPIError
 from google.auth.exceptions import DefaultCredentialsError
 from google.cloud import bigquery
 
 from haze_ingest.cities import City, load_cities
 from haze_ingest.config import ConfigError, Settings
 from haze_ingest.firms import HOTSPOT_SCHEMA, MAX_DAY_RANGE, FirmsError, fetch_hotspots
-from haze_ingest.load import ensure_table, load_partitions
+from haze_ingest.load import ensure_table, group_by_date, load_partitions
 from haze_ingest.openmeteo import AIR_QUALITY_SCHEMA, OpenMeteoError, fetch_air_quality
 from haze_ingest.session import make_session
 
@@ -62,13 +63,19 @@ def run(
 
     dates = [start + timedelta(days=i) for i in range((end - start).days + 1)]
     ingested_at = now.isoformat()
+    tables = []
     for table, schema, models, partition_field, clustering in (
         (HOTSPOT_TABLE, HOTSPOT_SCHEMA, hotspots, "acq_date", None),
         (AIR_QUALITY_TABLE, AIR_QUALITY_SCHEMA, air_quality, "date", ["city"]),
     ):
         table_id = table.format(project=settings.gcp_project_id)
-        ensure_table(client, table_id, schema, partition_field, clustering)
         rows = [{**m.model_dump(mode="json"), "ingested_at": ingested_at} for m in models]
+        group_by_date(rows, partition_field, dates, table_id)  # validate both tables before writing either
+        tables.append((table_id, schema, rows, partition_field, clustering))
+
+    # No transactions without DML: a BigQuery failure here can leave one table newer than the other; rerunning heals it.
+    for table_id, schema, rows, partition_field, clustering in tables:
+        ensure_table(client, table_id, schema, partition_field, clustering)
         counts = load_partitions(client, table_id, schema, rows, partition_field, dates)
         log.info("%s rows per date: %s", table_id, {str(d): n for d, n in counts.items()})
 
@@ -93,11 +100,14 @@ def main(argv: list[str] | None = None) -> int:
         validate_window(start, end, today)
         try:
             client = bigquery.Client(project=settings.gcp_project_id)
-        except DefaultCredentialsError:
-            raise ConfigError("No GCP credentials found. Set GOOGLE_APPLICATION_CREDENTIALS to the loader service-account JSON (see .env.example).") from None
+        except DefaultCredentialsError as e:
+            raise ConfigError(f"No GCP credentials found ({e}). Set GOOGLE_APPLICATION_CREDENTIALS to the loader service-account JSON (see .env.example).") from None
         run(settings, make_session(), client, load_cities(), start, end, now)
     except (ConfigError, FirmsError, OpenMeteoError, ValueError) as e:
         log.error("%s", e)
+        return 1
+    except (GoogleAPIError, TimeoutError) as e:
+        log.error("BigQuery failed: %s: %s. Loads are idempotent; rerun the same window.", type(e).__name__, e)
         return 1
     return 0
 

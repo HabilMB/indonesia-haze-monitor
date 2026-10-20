@@ -59,10 +59,14 @@ def fetch_air_quality(session: requests.Session, city: City, start: dt.date, end
             reason = response.text[:100]
         raise OpenMeteoError(f"Open-Meteo request failed for {city.name}: HTTP {response.status_code}: {reason}")
 
-    data = response.json()
-    hourly = data["hourly"]
-    times = hourly["time"]
-    if any(len(hourly[name]) != len(times) for name in HOURLY):
+    try:
+        data = response.json()
+        times = data["hourly"]["time"]
+        columns = {name: data["hourly"][name] for name in HOURLY}
+        grid_latitude, grid_longitude = data["latitude"], data["longitude"]
+    except (ValueError, KeyError, TypeError) as e:
+        raise OpenMeteoError(f"Open-Meteo returned an unexpected response for {city.name}: {type(e).__name__}") from None
+    if any(len(values) != len(times) for values in columns.values()):
         raise OpenMeteoError(f"Open-Meteo returned arrays of different lengths for {city.name}")
 
     rows = []
@@ -72,11 +76,11 @@ def fetch_air_quality(session: requests.Session, city: City, start: dt.date, end
             rows.append(
                 AirQualityHour(
                     city=city.name,
-                    grid_latitude=data["latitude"],
-                    grid_longitude=data["longitude"],
+                    grid_latitude=grid_latitude,
+                    grid_longitude=grid_longitude,
                     time=time,
                     date=time.date(),
-                    **{name: hourly[name][i] for name in HOURLY},
+                    **{name: values[i] for name, values in columns.items()},
                 )
             )
         except ValidationError as e:

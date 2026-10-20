@@ -69,3 +69,10 @@ def test_bad_acq_time_rejected():
     responses.get(URL, body=f"{HEADER}\n{ROW_1.replace(',518,', ',2460,')}\n")
     with pytest.raises(FirmsError):
         fetch()
+
+
+@responses.activate
+def test_row_with_extra_field_raises_firms_error():
+    responses.get(URL, body=f"{HEADER}\n{ROW_1},extra\n")
+    with pytest.raises(FirmsError, match="line 2"):
+        fetch()

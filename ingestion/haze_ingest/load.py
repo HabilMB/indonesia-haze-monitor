@@ -20,6 +20,16 @@ def ensure_table(
     client.create_table(table, exists_ok=True)
 
 
+def group_by_date(rows: list[dict], partition_field: str, dates: list[date], table_id: str) -> dict[date, list[dict]]:
+    by_date = defaultdict(list)
+    for row in rows:
+        by_date[date.fromisoformat(row[partition_field])].append(row)
+    outside = sorted(set(by_date) - set(dates))
+    if outside:
+        raise ValueError(f"{table_id}: rows for dates outside the load window: {', '.join(map(str, outside))}")
+    return by_date
+
+
 def load_partitions(
     client: bigquery.Client,
     table_id: str,
@@ -31,12 +41,7 @@ def load_partitions(
     # Sandbox has no DML: each date is replaced by a WRITE_TRUNCATE load into its partition,
     # and a date with no rows has its partition deleted so stale rows can't survive a re-pull.
     dates = list(dates)
-    by_date = defaultdict(list)
-    for row in rows:
-        by_date[date.fromisoformat(row[partition_field])].append(row)
-    outside = sorted(set(by_date) - set(dates))
-    if outside:
-        raise ValueError(f"{table_id}: rows for dates outside the load window: {', '.join(map(str, outside))}")
+    by_date = group_by_date(rows, partition_field, dates, table_id)
 
     job_config = bigquery.LoadJobConfig(
         schema=schema,

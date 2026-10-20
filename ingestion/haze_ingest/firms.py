@@ -73,6 +73,7 @@ def fetch_hotspots(session: requests.Session, map_key: str, start: date, day_ran
     for line, row in enumerate(csv.DictReader(io.StringIO(text)), start=2):
         try:
             hotspots.append(Hotspot(**row))
-        except ValidationError as e:
-            raise FirmsError(f"FIRMS row invalid at line {line} for {window}: {e.errors()[0]['msg']}") from None
+        except (ValidationError, TypeError) as e:
+            reason = e.errors()[0]["msg"] if isinstance(e, ValidationError) else "unexpected number of fields"
+            raise FirmsError(f"FIRMS row invalid at line {line} for {window}: {reason}") from None
     return hotspots

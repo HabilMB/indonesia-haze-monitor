@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Mapping
 
 
@@ -9,7 +9,7 @@ class ConfigError(Exception):
 
 @dataclass(frozen=True)
 class Settings:
-    firms_map_key: str
+    firms_map_key: str = field(repr=False)
     gcp_project_id: str
 
     @classmethod

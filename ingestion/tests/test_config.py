@@ -20,3 +20,7 @@ def test_config_error_never_echoes_values():
     with pytest.raises(ConfigError) as exc:
         Settings.from_env({"FIRMS_MAP_KEY": "secret123"})
     assert "secret123" not in str(exc.value)
+
+
+def test_repr_hides_key():
+    assert "secret123" not in repr(Settings(firms_map_key="secret123", gcp_project_id="p"))

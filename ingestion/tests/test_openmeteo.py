@@ -76,3 +76,19 @@ def test_negative_pm25_rejected():
     mock(json=body(pm2_5=[-1.0, 60.1]))
     with pytest.raises(OpenMeteoError):
         fetch()
+
+
+@responses.activate
+def test_non_json_body_raises():
+    responses.get(URL, body="<html>busy</html>", match=[matchers.query_param_matcher(PARAMS)])
+    with pytest.raises(OpenMeteoError, match="Palangka Raya"):
+        fetch()
+
+
+@responses.activate
+def test_missing_variable_raises():
+    data = body()
+    del data["hourly"]["us_aqi"]
+    mock(json=data)
+    with pytest.raises(OpenMeteoError, match="Palangka Raya"):
+        fetch()
