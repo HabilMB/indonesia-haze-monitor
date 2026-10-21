@@ -51,7 +51,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      AIRFLOW_HOME: ${{ runner.temp }}/airflow
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -66,4 +65,4 @@ jobs:
         run: pip install -r airflow/requirements-dev.txt -c https://raw.githubusercontent.com/apache/airflow/constraints-3.3.2/constraints-3.12.txt
 
       - name: pytest (DAG)
-        run: python -m pytest airflow/tests -v
+        run: AIRFLOW_HOME="$RUNNER_TEMP/airflow" python -m pytest airflow/tests -v
