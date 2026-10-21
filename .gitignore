@@ -4,8 +4,9 @@ secrets/
 *.json
 .streamlit/secrets.toml
 
-# Local notes and plan scratch
+# Local notes, plan scratch and editor tooling
 .superpowers/
+.serena/
 *.md
 !README.md
 
