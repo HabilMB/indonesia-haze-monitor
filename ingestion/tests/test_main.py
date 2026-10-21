@@ -140,3 +140,15 @@ def test_main_credentials_error_keeps_cause(monkeypatch, caplog):
     monkeypatch.setattr(cli.bigquery, "Client", missing_file)
     assert cli.main([]) == 1
     assert "secrets/loader-sa.json was not found" in caplog.text
+
+
+def test_main_returns_1_when_key_file_is_unreadable(monkeypatch, caplog):
+    def unreadable(project):
+        raise PermissionError(13, "Permission denied", "/opt/pipeline/secrets/loader-sa.json")
+
+    monkeypatch.setenv("FIRMS_MAP_KEY", "KEY123")
+    monkeypatch.setenv("GCP_PROJECT_ID", "p")
+    monkeypatch.setattr(cli.bigquery, "Client", unreadable)
+    assert cli.main([]) == 1
+    assert "/opt/pipeline/secrets/loader-sa.json" in caplog.text
+    assert "AIRFLOW_UID" in caplog.text

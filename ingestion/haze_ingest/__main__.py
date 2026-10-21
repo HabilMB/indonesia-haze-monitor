@@ -102,6 +102,8 @@ def main(argv: list[str] | None = None) -> int:
             client = bigquery.Client(project=settings.gcp_project_id)
         except DefaultCredentialsError as e:
             raise ConfigError(f"No GCP credentials found ({e}). Set GOOGLE_APPLICATION_CREDENTIALS to the loader service-account JSON (see .env.example).") from None
+        except PermissionError as e:
+            raise ConfigError(f"Cannot read the GCP key file {e.filename}. Check its permissions; under docker compose, AIRFLOW_UID in .env must be your `id -u`.") from None
         run(settings, make_session(), client, load_cities(), start, end, now)
     except (ConfigError, FirmsError, OpenMeteoError, ValueError) as e:
         log.error("%s", e)

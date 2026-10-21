@@ -1,0 +1,4 @@
+# The image only needs the requirements files; keeps .env and secrets/ out of the build context.
+*
+!ingestion/requirements.txt
+!dbt/requirements.txt
