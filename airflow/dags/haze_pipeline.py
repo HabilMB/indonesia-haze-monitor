@@ -12,7 +12,8 @@ Ingests the last 3 completed UTC days (FIRMS hotspots, Open-Meteo air quality) i
 then runs `dbt build` and `dbt source freshness`.
 
 **One production writer at a time.** The GitHub Actions cron (06:00 UTC) owns the live datasets, so
-this DAG starts paused. Unpause it only with that cron disabled, or trigger it manually away from 06:00 UTC.
+this DAG starts paused. Unpausing starts the latest 06:00 interval right away, so to run it once, unpause it away
+from 06:00 UTC and pause it again afterwards; keep it unpaused only with that cron disabled.
 
 The ingest window is relative to *now*, not to the run's logical date, so retrying or clearing an old
 run re-pulls the current trailing 3 days (as a rerun of the GitHub workflow would).
