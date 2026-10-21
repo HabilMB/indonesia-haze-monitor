@@ -1,0 +1,72 @@
+name: dbt docs
+
+# Publishes the dbt docs site (models, tests, lineage) to GitHub Pages. `docs generate` only compiles
+# and reads the catalog (INFORMATION_SCHEMA), so it never writes the production datasets.
+on:
+  push:
+    branches: [main]
+    paths: ["dbt/**", ".github/workflows/docs.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      DBT_SEND_ANONYMOUS_USAGE_STATS: "false"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: dbt/requirements.txt
+
+      - name: Install dbt
+        run: pip install -r dbt/requirements.txt
+
+      - name: Write service-account key
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          umask 077
+          printf '%s' "$GCP_SA_KEY" > "$RUNNER_TEMP/loader-sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/loader-sa.json" >> "$GITHUB_ENV"
+
+      - name: Generate docs
+        # --static inlines manifest and catalog into one HTML file, so the site needs nothing else.
+        run: |
+          dbt docs generate --static --project-dir dbt --profiles-dir dbt
+          mkdir -p "$RUNNER_TEMP/site"
+          cp dbt/target/static_index.html "$RUNNER_TEMP/site/index.html"
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/loader-sa.json"
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        with:
+          path: ${{ runner.temp }}/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1
