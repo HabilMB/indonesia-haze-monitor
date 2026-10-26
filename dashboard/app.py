@@ -16,7 +16,7 @@ MUTED = "#898781"
 INK = "#0b0b0b"
 RANGES = {"Last 30 days": 30, "Last 60 days": 60, "Whole season": None}
 
-st.set_page_config(page_title="Indonesia Haze Monitor", page_icon="🔥", layout="wide")
+st.set_page_config(page_title="Indonesia Haze Monitor", layout="wide")
 
 
 def style(chart: alt.Chart) -> alt.Chart:
