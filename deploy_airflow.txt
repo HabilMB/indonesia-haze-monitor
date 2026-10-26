@@ -1,0 +1,5 @@
+  docker compose up -d --build          # first time builds the image (~1 GB base)
+  # UI: http://127.0.0.1:8080, user "admin", password = AIRFLOW_ADMIN_PASSWORD from .env
+  docker compose exec airflow-scheduler airflow dags unpause haze_pipeline   # runs once now
+  docker compose exec airflow-scheduler airflow dags pause haze_pipeline     # afterwards
+  docker compose down
